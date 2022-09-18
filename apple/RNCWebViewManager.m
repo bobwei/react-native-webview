@@ -205,6 +205,50 @@ RCT_EXPORT_METHOD(stopLoading:(nonnull NSNumber *)reactTag)
   }];
 }
 
+RCT_EXPORT_METHOD(
+  exportCookies:(nonnull NSNumber *)reactTag
+  resolver:(RCTPromiseResolveBlock)resolve
+  rejecter:(RCTPromiseRejectBlock)reject
+)
+{
+    [self.bridge.uiManager addUIBlock:^(__unused RCTUIManager *uiManager, NSDictionary<NSNumber *, RNCWebView *> *viewRegistry) {
+        RNCWebView *view = viewRegistry[reactTag];
+        WKHTTPCookieStore *cookieStore = view.webView.configuration.websiteDataStore.httpCookieStore;
+        [cookieStore getAllCookies:^(NSArray<NSHTTPCookie *> *allCookies) {
+            NSMutableDictionary *cookies = [NSMutableDictionary dictionary];
+            for (NSHTTPCookie *cookie in allCookies) {
+                [cookies setObject:[self createCookieData:cookie] forKey:cookie.name];
+            }
+            resolve(cookies);
+        }];
+    }];
+}
+
+-(NSDictionary *)createCookieData:(NSHTTPCookie *)cookie
+{
+    NSMutableDictionary *cookieData = [NSMutableDictionary dictionary];
+    [cookieData setObject:cookie.name forKey:@"name"];
+    [cookieData setObject:cookie.value forKey:@"value"];
+    [cookieData setObject:cookie.path forKey:@"path"];
+    [cookieData setObject:cookie.domain forKey:@"domain"];
+    [cookieData setObject:[NSString stringWithFormat:@"%@", @(cookie.version)] forKey:@"version"];
+    if (!isEmpty(cookie.expiresDate)) {
+        NSDateFormatter *formatter = [NSDateFormatter new];
+        [formatter setDateFormat:@"yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ"];
+        [cookieData setObject:[formatter stringFromDate:cookie.expiresDate] forKey:@"expires"];
+    }
+    [cookieData setObject:[NSNumber numberWithBool:(BOOL)cookie.secure] forKey:@"secure"];
+    [cookieData setObject:[NSNumber numberWithBool:(BOOL)cookie.HTTPOnly] forKey:@"httpOnly"];
+    return cookieData;
+}
+
+static inline BOOL isEmpty(id value)
+{
+    return value == nil
+        || ([value respondsToSelector:@selector(length)] && [(NSData *)value length] == 0)
+        || ([value respondsToSelector:@selector(count)] && [(NSArray *)value count] == 0);
+}
+
 #pragma mark - Exported synchronous methods
 
 - (BOOL)          webView:(RNCWebView *)webView

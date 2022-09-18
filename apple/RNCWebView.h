@@ -79,5 +79,6 @@
 - (void)stopLoading;
 - (void)addPullToRefreshControl;
 - (void)pullToRefresh:(UIRefreshControl *)refreshControl;
+- (WKWebView *)webView;
 
 @end
