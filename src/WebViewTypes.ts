@@ -326,6 +326,8 @@ export interface IOSNativeWebViewProps extends CommonNativeWebViewProps {
   injectedJavaScriptForMainFrameOnly?: boolean;
   injectedJavaScriptBeforeContentLoadedForMainFrameOnly?: boolean;
   onFileDownload?: (event: FileDownloadEvent) => void;
+  // eslint-disable-next-line
+  onCookiesDidChangeInCookieStore: (data: any) => void;
 }
 
 export interface MacOSNativeWebViewProps extends CommonNativeWebViewProps {
@@ -534,6 +536,9 @@ export interface IOSWebViewProps extends WebViewSharedProps {
    * @platform ios
    */
   onContentProcessDidTerminate?: (event: WebViewTerminatedEvent) => void;
+
+  // eslint-disable-next-line
+  onCookiesDidChangeInCookieStore: (data: any) => void;
 
   /**
    * If `true` (default), loads the `injectedJavaScript` only into the main frame.

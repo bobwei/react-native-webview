@@ -63,6 +63,7 @@ static NSDictionary* customCertificatesForHost;
 #endif // TARGET_OS_OSX
 
 @interface RNCWebView () <WKUIDelegate, WKNavigationDelegate, WKScriptMessageHandler,
+    WKHTTPCookieStoreObserver,
 #if !TARGET_OS_OSX
     UIScrollViewDelegate,
 #endif // !TARGET_OS_OSX
@@ -78,6 +79,7 @@ static NSDictionary* customCertificatesForHost;
 @property (nonatomic, copy) RCTDirectEventBlock onMessage;
 @property (nonatomic, copy) RCTDirectEventBlock onScroll;
 @property (nonatomic, copy) RCTDirectEventBlock onContentProcessDidTerminate;
+@property (nonatomic, copy) RCTDirectEventBlock onCookiesDidChangeInCookieStore;
 #if !TARGET_OS_OSX
 @property (nonatomic, copy) WKWebView *webView;
 #else
@@ -268,6 +270,10 @@ static NSDictionary* customCertificatesForHost;
     _webView = [[RNCWKWebView alloc] initWithFrame:self.bounds configuration: wkWebViewConfig];
 #endif // !TARGET_OS_OSX
 
+    if (_onCookiesDidChangeInCookieStore) {
+      [wkWebViewConfig.websiteDataStore.httpCookieStore addObserver:self];
+    }
+
     [self setBackgroundColor: _savedBackgroundColor];
 #if !TARGET_OS_OSX
     _webView.scrollView.delegate = self;
@@ -318,6 +324,9 @@ static NSDictionary* customCertificatesForHost;
         [_webView.configuration.userContentController removeScriptMessageHandlerForName:MessageHandlerName];
         [_webView removeObserver:self forKeyPath:@"estimatedProgress"];
         [_webView removeFromSuperview];
+        if (_onCookiesDidChangeInCookieStore) {
+          [_webView.configuration.websiteDataStore.httpCookieStore removeObserver:self];
+        }
 #if !TARGET_OS_OSX
         _webView.scrollView.delegate = nil;
 #endif // !TARGET_OS_OSX
@@ -1360,6 +1369,41 @@ static NSDictionary* customCertificatesForHost;
     }
   }
   return request;
+}
+
+- (void)cookiesDidChangeInCookieStore:(WKHTTPCookieStore *)cookieStore {
+    [cookieStore getAllCookies:^(NSArray<NSHTTPCookie *> *allCookies) {
+        NSMutableDictionary *cookies = [NSMutableDictionary dictionary];
+        for (NSHTTPCookie *cookie in allCookies) {
+            [cookies setObject:[self createCookieData:cookie] forKey:cookie.name];
+        }
+        _onCookiesDidChangeInCookieStore(cookies);
+    }];
+}
+
+-(NSDictionary *)createCookieData:(NSHTTPCookie *)cookie
+{
+    NSMutableDictionary *cookieData = [NSMutableDictionary dictionary];
+    [cookieData setObject:cookie.name forKey:@"name"];
+    [cookieData setObject:cookie.value forKey:@"value"];
+    [cookieData setObject:cookie.path forKey:@"path"];
+    [cookieData setObject:cookie.domain forKey:@"domain"];
+    [cookieData setObject:[NSString stringWithFormat:@"%@", @(cookie.version)] forKey:@"version"];
+    if (!isEmpty(cookie.expiresDate)) {
+        NSDateFormatter *formatter = [NSDateFormatter new];
+        [formatter setDateFormat:@"yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ"];
+        [cookieData setObject:[formatter stringFromDate:cookie.expiresDate] forKey:@"expires"];
+    }
+    [cookieData setObject:[NSNumber numberWithBool:(BOOL)cookie.secure] forKey:@"secure"];
+    [cookieData setObject:[NSNumber numberWithBool:(BOOL)cookie.HTTPOnly] forKey:@"httpOnly"];
+    return cookieData;
+}
+
+static inline BOOL isEmpty(id value)
+{
+    return value == nil
+        || ([value respondsToSelector:@selector(length)] && [(NSData *)value length] == 0)
+        || ([value respondsToSelector:@selector(count)] && [(NSArray *)value count] == 0);
 }
 
 @end
