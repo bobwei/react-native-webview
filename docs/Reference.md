@@ -689,6 +689,20 @@ isTopFrame
 
 ---
 
+### `exportCookies`[⬆](#props-index)<!-- Link generated with jump2header -->
+
+Example:
+
+```jsx
+NativeModules.RNCWebViewManager
+  .exportCookies(webviewRef.current?.getWebViewHandle())
+  ?.then(console.log)
+  .catch(console.log);
+```
+
+---
+
+
 ### `startInLoadingState`[⬆](#props-index)<!-- Link generated with jump2header -->
 
 Boolean value that forces the `WebView` to show the loading view on the first load. This prop must be set to `true` in order for the `renderLoading` prop to work.
@@ -782,7 +796,7 @@ A Boolean value indicating whether JavaScript can open windows without user inte
 
 ### `androidHardwareAccelerationDisabled`[⬆](#props-index)<!-- Link generated with jump2header -->
 
-**Deprecated.** Use the `androidLayerType` prop instead. 
+**Deprecated.** Use the `androidLayerType` prop instead.
 
 | Type | Required | Platform |
 | ---- | -------- | -------- |
@@ -792,7 +806,7 @@ A Boolean value indicating whether JavaScript can open windows without user inte
 
 ### `androidLayerType`[⬆](#props-index)<!-- Link generated with jump2header -->
 
-Specifies the layer type. 
+Specifies the layer type.
 
 Possible values for `androidLayerType` are:
 
