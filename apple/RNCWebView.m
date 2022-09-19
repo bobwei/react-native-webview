@@ -273,6 +273,13 @@ static NSDictionary* customCertificatesForHost;
     if (_onCookiesDidChangeInCookieStore) {
       [wkWebViewConfig.websiteDataStore.httpCookieStore addObserver:self];
     }
+    if (_cookies) {
+        for (NSString *key in _cookies) {
+            NSHTTPCookie *cookie = [self makeHTTPCookieObject:_cookies[key]];
+            WKHTTPCookieStore *cookieStore = _webView.configuration.websiteDataStore.httpCookieStore;
+            [cookieStore setCookie:cookie completionHandler:nil];
+        }
+    }
 
     [self setBackgroundColor: _savedBackgroundColor];
 #if !TARGET_OS_OSX
@@ -310,6 +317,53 @@ static NSDictionary* customCertificatesForHost;
     [self setKeyboardDisplayRequiresUserAction: _savedKeyboardDisplayRequiresUserAction];
     [self visitSource];
   }
+}
+
+-(NSHTTPCookie *)makeHTTPCookieObject:(NSDictionary *)props
+{
+    NSString *name = [RCTConvert NSString:props[@"name"]];
+    NSString *value = [RCTConvert NSString:props[@"value"]];
+    NSString *path = [RCTConvert NSString:props[@"path"]];
+    NSString *domain = [RCTConvert NSString:props[@"domain"]];
+    NSString *version = [RCTConvert NSString:props[@"version"]];
+    NSDate *expires = [RCTConvert NSDate:props[@"expires"]];
+    NSNumber *secure = [RCTConvert NSNumber:props[@"secure"]];
+    NSNumber *httpOnly = [RCTConvert NSNumber:props[@"httpOnly"]];
+
+    NSMutableDictionary *cookieProperties = [NSMutableDictionary dictionary];
+    [cookieProperties setObject:name forKey:NSHTTPCookieName];
+    [cookieProperties setObject:value forKey:NSHTTPCookieValue];
+
+    if (!isEmpty(path)) {
+        [cookieProperties setObject:path forKey:NSHTTPCookiePath];
+    } else {
+        [cookieProperties setObject:@"/" forKey:NSHTTPCookiePath];
+    }
+    if (!isEmpty(domain)) {
+        // Stripping the leading . to ensure the following check is accurate
+        NSString *strippedDomain = domain;
+         if ([strippedDomain hasPrefix:@"."]) {
+            strippedDomain = [strippedDomain substringFromIndex:1];
+        }
+
+        [cookieProperties setObject:domain forKey:NSHTTPCookieDomain];
+    }
+    if (!isEmpty(version)) {
+         [cookieProperties setObject:version forKey:NSHTTPCookieVersion];
+    }
+    if (!isEmpty(expires)) {
+         [cookieProperties setObject:expires forKey:NSHTTPCookieExpires];
+    }
+    if ([secure boolValue]) {
+        [cookieProperties setObject:secure forKey:NSHTTPCookieSecure];
+    }
+    if ([httpOnly boolValue]) {
+        [cookieProperties setObject:httpOnly forKey:@"HttpOnly"];
+    }
+
+    NSHTTPCookie *cookie = [NSHTTPCookie cookieWithProperties:cookieProperties];
+
+    return cookie;
 }
 
 // Update webview property when the component prop changes.
